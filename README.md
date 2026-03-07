@@ -1,8 +1,8 @@
 # philo
 
-Five philosophers, five forks, one table. No deadlock, no starvation, no semaphores — just threads, mutexes, and careful timing.
+Implementation of the dining philosophers problem using POSIX threads and mutexes.
 
-## Quick Start
+## Build
 
 ```bash
 make
@@ -10,42 +10,30 @@ make
 ```
 
 ```bash
-# 5 philosophers die if they go 800ms without eating, eat for 200ms, sleep for 200ms
-./philo 5 800 200 200
-
-# stop after each philosopher has eaten at least 7 times
-./philo 5 800 200 200 7
+./philo 5 800 200 200        # basic run
+./philo 5 800 200 200 7      # stop after 7 meals each
 ```
 
-All times are in milliseconds.
+Times are in milliseconds.
 
 ## How it works
 
-**Threading model**
+Each philosopher is a thread, each fork is a mutex. A monitor in the main thread checks timestamps to detect starvation.
 
-Each philosopher is a POSIX thread. Each fork is a mutex. The monitor runs in the main thread, polling timestamps to detect starvation.
+**Deadlock prevention:** even-index philosophers grab the right fork first, odd-index grab the left fork first. This breaks the circular wait.
 
-**Deadlock prevention**
+**Death detection:** the monitor loops over each philosopher's last meal timestamp. If `current_time - last_meal > time_to_die`, it sets a shared death flag and prints the message. All threads check this flag before acting.
 
-Without intervention, philosophers can deadlock: everyone picks up their left fork and waits forever for their right. The fix: philosophers with an even index pick up the right fork first, odd-index philosophers pick up the left fork first. This breaks the circular wait condition without requiring a central coordinator.
+All shared state (last meal time, death flag, fork status) is mutex-protected. Timing uses `gettimeofday`.
 
-**Death detection**
+## Edge cases
 
-The monitor checks each philosopher's last-meal timestamp on every iteration. When a timestamp exceeds `time_to_die`, the monitor sets a shared `dead` flag and prints the death message. All threads check this flag before their next action and exit cleanly.
+- 1 philosopher: picks up one fork, can't get the second one, dies.
+- `time_to_eat > time_to_die`: philosopher dies during/after eating. Handled correctly.
 
-**No data races**
-
-Every shared variable — last meal time, death flag, fork availability — is protected by a mutex. The monitor reads timestamps under lock. `gettimeofday` is used for millisecond precision.
-
-## Edge cases handled
-
-- A single philosopher: picks up one fork, waits, dies. No deadlock — just physics.
-- `time_to_eat > time_to_die`: philosopher dies immediately after first meal. Handled correctly.
-
-## Project structure
+## Structure
 
 ```
-├── includes/          — t_philo and t_data structs, prototypes
-└── srcs/
-    └── mandatory/     — philosopher threads, monitor, timing, utils
+includes/          - structs and prototypes
+srcs/mandatory/    - threads, monitor, timing, utils
 ```
