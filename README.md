@@ -34,6 +34,6 @@ All shared state (last meal time, death flag, fork status) is mutex-protected. T
 ## Structure
 
 ```
-includes/          - structs and prototypes
-srcs/mandatory/    - threads, monitor, timing, utils
+├── includes/          - structs and prototypes
+└── srcs/mandatory/    - threads, monitor, timing, utils
 ```
